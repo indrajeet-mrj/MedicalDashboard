@@ -10,7 +10,7 @@ const SalesHistory = () => {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/sales/history');
+      const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/sales/history');
       groupData(res.data);
     } catch (error) { console.error("Error fetching history:", error); }
   };
@@ -34,7 +34,7 @@ const SalesHistory = () => {
     if (qtyToReturn <= 0) return alert("Select return quantity");
     if (window.confirm("Confirm return?")) {
       try {
-        const res = await axios.post('http://localhost:5000/api/sales/return', { saleId: itemId, returnQty: qtyToReturn });
+        const res = await axios.post('https://medicaldashboard-2556.onrender.com/api/sales/return', { saleId: itemId, returnQty: qtyToReturn });
         alert(`✅ Refund: ₹ ${res.data.refundAmount}`);
         setSelectedInvoice(null); setReturnQtys({}); fetchHistory();
       } catch (error) { alert("Return Failed: " + (error.response?.data?.error || "Error")); }

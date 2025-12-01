@@ -16,9 +16,9 @@ const DashboardStats = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const statsRes = await axios.get('http://localhost:5000/api/dashboard/stats');
+        const statsRes = await axios.get('https://medicaldashboard-2556.onrender.com/api/dashboard/stats');
         setStats(statsRes.data);
-        const chartRes = await axios.get('http://localhost:5000/api/sales/chart');
+        const chartRes = await axios.get('https://medicaldashboard-2556.onrender.com/api/sales/chart');
         const formattedData = chartRes.data.map(item => ({
           name: item._id.split('-').slice(1).join('/'),
           sales: item.totalSales
@@ -31,7 +31,7 @@ const DashboardStats = () => {
 
   const handleLowStockClick = async () => {
     if (stats.lowStockItems > 0) {
-      const res = await axios.get('http://localhost:5000/api/medicine/low-stock-list');
+      const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/low-stock-list');
       setLowStockList(res.data);
       setShowLowStockModal(true);
     } else { alert("Good News! Stock full hai."); }
@@ -39,7 +39,7 @@ const DashboardStats = () => {
 
   const handleExpiryClick = async () => {
     if (stats.expiringSoon > 0) {
-      const res = await axios.get('http://localhost:5000/api/medicine/expiring-soon-list');
+      const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/expiring-soon-list');
       setExpiryList(res.data);
       setShowExpiryModal(true);
     } else { alert("Badhiya! Koi dawai expire nahi ho rahi."); }

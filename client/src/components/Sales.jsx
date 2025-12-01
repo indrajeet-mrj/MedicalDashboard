@@ -15,7 +15,7 @@ const Sales = () => {
   // 1. Fetch Medicines
   const fetchMedicines = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/medicine/all');
+      const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/all');
       setMedicines(res.data);
     } catch (error) {
       console.error("Error fetching medicines:", error);
@@ -67,7 +67,7 @@ const Sales = () => {
 
     try {
       for (const item of cart) {
-        await axios.post('http://localhost:5000/api/sales/add', {
+        await axios.post('https://medicaldashboard-2556.onrender.com/api/sales/add', {
           invoiceId: invoiceId, // <-- Same ID for all items
           medicineId: item.id,
           quantity: item.quantity,

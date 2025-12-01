@@ -9,7 +9,7 @@ const Demand = () => {
   const [medicineName, setMedicineName] = useState('');
 
   const fetchDemands = async () => {
-    try { const res = await axios.get('http://localhost:5000/api/demand/all'); setDemands(res.data); } 
+    try { const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/demand/all'); setDemands(res.data); } 
     catch (error) { console.error(error); }
   };
   useEffect(() => { fetchDemands(); }, []);
@@ -18,13 +18,13 @@ const Demand = () => {
     e.preventDefault();
     if (!medicineName.trim()) return;
     try {
-      await axios.post('http://localhost:5000/api/demand/add', { medicineName });
+      await axios.post('https://medicaldashboard-2556.onrender.com/api/demand/add', { medicineName });
       setMedicineName(''); fetchDemands();
     } catch (error) { alert(error.response?.data?.error || "Error"); }
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`http://localhost:5000/api/demand/delete/${id}`); fetchDemands();
+    await axios.delete(`https://medicaldashboard-2556.onrender.com/api/demand/delete/${id}`); fetchDemands();
   };
 
   const handleDownloadPDF = () => {

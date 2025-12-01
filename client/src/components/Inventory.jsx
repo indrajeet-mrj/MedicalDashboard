@@ -9,7 +9,7 @@ const Inventory = () => {
   const [editingId, setEditingId] = useState(null);
 
   const fetchMedicines = async () => {
-    try { const res = await axios.get('http://localhost:5000/api/medicine/all'); setMedicines(res.data); } 
+    try { const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/all'); setMedicines(res.data); } 
     catch (error) { console.error("Error:", error); }
   };
   useEffect(() => { fetchMedicines(); }, []);
@@ -20,10 +20,10 @@ const Inventory = () => {
     e.preventDefault();
     try {
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/medicine/update/${editingId}`, formData);
+        await axios.put(`https://medicaldashboard-2556.onrender.com/api/medicine/update/${editingId}`, formData);
         alert('✅ Medicine Updated'); setEditingId(null);
       } else {
-        await axios.post('http://localhost:5000/api/medicine/add', formData);
+        await axios.post('https://medicaldashboard-2556.onrender.com/api/medicine/add', formData);
         alert('✅ Medicine Added');
       }
       setFormData({ name: '', category: 'Tablet', expiryDate: '', quantity: '', price: '' });
@@ -33,7 +33,7 @@ const Inventory = () => {
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete medicine?")) {
-      await axios.delete(`http://localhost:5000/api/medicine/delete/${id}`);
+      await axios.delete(`https://medicaldashboard-2556.onrender.com/api/medicine/delete/${id}`);
       fetchMedicines();
     }
   };
