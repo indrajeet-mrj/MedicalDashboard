@@ -64,7 +64,7 @@ const Demand = () => {
       {/* List Section */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden max-w-4xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[500px]">
+          <table className="w-full text-left min-w-[500px] text-gray-700">
             <thead className="bg-gray-200 text-gray-700">
               <tr><th className="p-4">#</th><th className="p-4">Medicine Name</th><th className="p-4">Date Noted</th><th className="p-4 text-center">Action</th></tr>
             </thead>
