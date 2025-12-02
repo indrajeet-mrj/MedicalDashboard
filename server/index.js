@@ -18,9 +18,9 @@ app.use(express.json());
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB Connected Successfully (Cloud)");
+    console.log("✅ MongoDB Connected Successfully (Cloud)");
   } catch (error) {
-    console.error("MongoDB Connection Error:", error);
+    console.error("❌ MongoDB Connection Error:", error);
     process.exit(1);
   }
 };
@@ -30,32 +30,34 @@ connectDB();
 // 2. DATABASE MODELS (SCHEMAS)
 // ---------------------------------------------------------
 
-// A. Inventory Model
+// A. Inventory Model (Added 'discount')
 const MedicineSchema = new mongoose.Schema({
   name: { type: String, required: true },
   category: { type: String, required: true },
   expiryDate: { type: Date, required: true },
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
+  discount: { type: Number, default: 0 }, // <-- NEW: Default Discount %
 }, { timestamps: true });
 
 const Medicine = mongoose.model("Medicine", MedicineSchema);
 
-// B. Sales Model (With Invoice & Patient Details)
+// B. Sales Model (Added 'discountGiven')
 const SalesSchema = new mongoose.Schema({
-  invoiceId: { type: String, required: true }, // Grouping Key
+  invoiceId: { type: String, required: true },
   medicineId: { type: mongoose.Schema.Types.ObjectId, ref: "Medicine" },
   medicineName: { type: String },
   patientName: { type: String },
   quantitySold: { type: Number, required: true },
   pricePerUnit: { type: Number }, 
+  discountGiven: { type: Number, default: 0 }, // <-- NEW
   totalAmount: { type: Number, required: true },
   saleDate: { type: Date, default: Date.now },
 });
 
 const Sale = mongoose.model("Sale", SalesSchema);
 
-// C. Demand Model (Shortage List)
+// C. Demand Model
 const DemandSchema = new mongoose.Schema({
   medicineName: { type: String, required: true },
   noteDate: { type: Date, default: Date.now }
@@ -67,13 +69,13 @@ const Demand = mongoose.model("Demand", DemandSchema);
 // 3. API ROUTES (INVENTORY & DEMAND)
 // ---------------------------------------------------------
 
-// Add Medicine (Auto-remove from Demand List if exists)
+// Add Medicine
 app.post("/api/medicine/add", async (req, res) => {
   try {
     const newMedicine = new Medicine(req.body);
     const savedMedicine = await newMedicine.save();
     
-    // Check and remove from Demand list if exists
+    // Auto-remove from Demand list
     await Demand.findOneAndDelete({ medicineName: { $regex: new RegExp(req.body.name, "i") } });
 
     res.status(201).json(savedMedicine);
@@ -112,34 +114,26 @@ app.delete("/api/medicine/delete/:id", async (req, res) => {
   }
 });
 
-// --- UPDATED DEMAND ADD ROUTE (With Stock Validation) ---
+// Demand List APIs
 app.post("/api/demand/add", async (req, res) => {
   try {
     const { medicineName } = req.body;
-
-    // 1. Check if medicine is already in Stock
+    // Check Stock
     const existingMedicine = await Medicine.findOne({ 
       name: { $regex: new RegExp(medicineName, "i") },
       quantity: { $gt: 0 } 
     });
 
     if (existingMedicine) {
-      return res.status(400).json({ 
-        error: `⚠️ Yeh dawa already Stock mein hai! (Qty: ${existingMedicine.quantity})` 
-      });
+      return res.status(400).json({ error: `⚠️ Medicine already in Stock! (Qty: ${existingMedicine.quantity})` });
     }
 
-    // 2. Add to Demand List if not in stock
     const newDemand = new Demand(req.body);
     await newDemand.save();
     res.status(201).json(newDemand);
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Get Demand List
 app.get("/api/demand/all", async (req, res) => {
   try {
     const demands = await Demand.find().sort({ noteDate: -1 });
@@ -147,7 +141,6 @@ app.get("/api/demand/all", async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Delete from Demand List
 app.delete("/api/demand/delete/:id", async (req, res) => {
   try {
     await Demand.findByIdAndDelete(req.params.id);
@@ -160,10 +153,10 @@ app.delete("/api/demand/delete/:id", async (req, res) => {
 // 4. API ROUTES (SALES, RETURNS & DASHBOARD)
 // ---------------------------------------------------------
 
-// Create Sale (With Invoice Grouping)
+// Create Sale (With Discount Calculation)
 app.post("/api/sales/add", async (req, res) => {
   try {
-    const { medicineId, quantity, patientName, invoiceId } = req.body;
+    const { medicineId, quantity, patientName, invoiceId, discount } = req.body;
 
     const medicine = await Medicine.findById(medicineId);
     if (!medicine) return res.status(404).json({ error: "Medicine not found" });
@@ -176,6 +169,11 @@ app.post("/api/sales/add", async (req, res) => {
     medicine.quantity -= quantity;
     await medicine.save();
 
+    // Calculate Price with Discount
+    const basePrice = medicine.price * quantity;
+    const discountAmount = (basePrice * (discount || 0)) / 100;
+    const finalAmount = basePrice - discountAmount;
+
     const newSale = new Sale({
       invoiceId,
       medicineId,
@@ -183,7 +181,8 @@ app.post("/api/sales/add", async (req, res) => {
       patientName: patientName || "Walk-in",
       quantitySold: quantity,
       pricePerUnit: medicine.price,
-      totalAmount: medicine.price * quantity
+      discountGiven: discount || 0,
+      totalAmount: finalAmount
     });
     
     await newSale.save();
@@ -203,7 +202,7 @@ app.get("/api/sales/history", async (req, res) => {
   }
 });
 
-// Return Logic (Restores Stock & Calculates Refund)
+// Return Logic
 app.post("/api/sales/return", async (req, res) => {
   try {
     const { saleId, returnQty } = req.body;
@@ -215,33 +214,24 @@ app.post("/api/sales/return", async (req, res) => {
       return res.status(400).json({ error: "Cannot return more than sold quantity" });
     }
 
-    // 1. Restore Stock
+    // Restore Stock
     const medicine = await Medicine.findById(saleRecord.medicineId);
     if (medicine) {
       medicine.quantity += parseInt(returnQty);
       await medicine.save();
     }
 
-    // 2. Fix NaN Error for Old Data
-    let price = saleRecord.pricePerUnit;
-    if (!price) {
-      price = saleRecord.totalAmount / saleRecord.quantitySold; 
-    }
-    const refundAmount = price * returnQty;
+    // Calculate Refund based on actual sold price (considering discount)
+    const effectivePricePerUnit = saleRecord.totalAmount / saleRecord.quantitySold;
+    const refundAmount = effectivePricePerUnit * returnQty;
     
-    // 3. Handle Full vs Partial Return
     if (parseInt(returnQty) === saleRecord.quantitySold) {
-      await Sale.findByIdAndDelete(saleId); // Full Return
+      await Sale.findByIdAndDelete(saleId);
     } else {
       saleRecord.quantitySold -= returnQty;
       saleRecord.totalAmount -= refundAmount;
-
-      // Fix Invoice ID Error for Old Data
-      if (!saleRecord.invoiceId) {
-        saleRecord.invoiceId = `OLD-${saleRecord._id}`;
-      }
-      
-      await saleRecord.save(); // Partial Return
+      if (!saleRecord.invoiceId) saleRecord.invoiceId = `OLD-${saleRecord._id}`;
+      await saleRecord.save();
     }
 
     res.json({ message: "Return Successful", refundAmount });
@@ -268,7 +258,6 @@ app.get("/api/dashboard/stats", async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Dashboard Popup Lists
 app.get("/api/medicine/low-stock-list", async (req, res) => {
   const list = await Medicine.find({ quantity: { $lt: 40 } });
   res.json(list);
@@ -288,5 +277,4 @@ app.get("/api/sales/chart", async (req, res) => {
   res.json(sales);
 });
 
-// Server Start
-app.listen(PORT, () => console.log(`Server running on Port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on Port ${PORT}`));
