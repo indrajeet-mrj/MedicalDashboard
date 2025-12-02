@@ -72,8 +72,8 @@ const Demand = () => {
               {demands.map((item, index) => (
                 <tr key={item._id} className="border-b hover:bg-gray-50">
                   <td className="p-4 font-bold">{index + 1}</td>
-                  <td className="p-4 font-medium text-lg">{item.medicineName}</td>
-                  <td className="p-4 text-gray-700">{new Date(item.noteDate).toLocaleDateString()}</td>
+                  <td className="p-4 font-medium text-lg text-gray-800">{item.medicineName}</td>
+                  <td className="p-4 text-gray-500">{new Date(item.noteDate).toLocaleDateString()}</td>
                   <td className="p-4 text-center"><button onClick={() => handleDelete(item._id)} className="text-red-500 hover:bg-red-100 p-2 rounded-full"><FaTrash /></button></td>
                 </tr>
               ))}
