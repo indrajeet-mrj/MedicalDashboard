@@ -1,136 +1,304 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { FaTimes, FaExclamationTriangle, FaCalendarTimes } from 'react-icons/fa';
+import { 
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid 
+} from 'recharts';
+import { 
+  FaTimes, FaExclamationTriangle, FaCalendarTimes, FaRupeeSign, FaPills 
+} from 'react-icons/fa';
 
 const DashboardStats = () => {
+  // --- STATES ---
   const [stats, setStats] = useState({
-    totalStockValue: 0, lowStockItems: 0, expiringSoon: 0, totalMedicines: 0
+    totalStockValue: 0,
+    lowStockItems: 0,
+    expiringSoon: 0,
+    totalMedicines: 0
   });
   const [chartData, setChartData] = useState([]);
+  
+  // Modals
   const [showLowStockModal, setShowLowStockModal] = useState(false);
   const [lowStockList, setLowStockList] = useState([]);
   const [showExpiryModal, setShowExpiryModal] = useState(false);
   const [expiryList, setExpiryList] = useState([]);
 
+  // --- FETCH DATA ---
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Render URL use kar rahe hain
         const statsRes = await axios.get('https://medicaldashboard-2556.onrender.com/api/dashboard/stats');
         setStats(statsRes.data);
+
         const chartRes = await axios.get('https://medicaldashboard-2556.onrender.com/api/sales/chart');
         const formattedData = chartRes.data.map(item => ({
-          name: item._id.split('-').slice(1).join('/'),
+          name: item._id.split('-').slice(1).join('/'), // Date format MM/DD
           sales: item.totalSales
         }));
         setChartData(formattedData);
-      } catch (error) { console.error("Error fetching data:", error); }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
     };
     fetchData();
   }, []);
 
+  // --- HANDLERS ---
   const handleLowStockClick = async () => {
     if (stats.lowStockItems > 0) {
-      const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/low-stock-list');
-      setLowStockList(res.data);
-      setShowLowStockModal(true);
-    } else { alert("Good News! Stock full hai."); }
+      try {
+        const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/low-stock-list');
+        setLowStockList(res.data);
+        setShowLowStockModal(true);
+      } catch (e) { console.error(e); }
+    }
   };
 
   const handleExpiryClick = async () => {
     if (stats.expiringSoon > 0) {
-      const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/expiring-soon-list');
-      setExpiryList(res.data);
-      setShowExpiryModal(true);
-    } else { alert("Badhiya! Koi dawai expire nahi ho rahi."); }
+      try {
+        const res = await axios.get('https://medicaldashboard-2556.onrender.com/api/medicine/expiring-soon-list');
+        setExpiryList(res.data);
+        setShowExpiryModal(true);
+      } catch (e) { console.error(e); }
+    }
+  };
+
+  // --- REUSABLE NEON CARD COMPONENT ---
+  const StatCard = ({ title, value, icon, color, onClick, isClickable }) => {
+    // Color mappings for borders and text
+    const borderColors = {
+      blue: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]',
+      green: 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]',
+      red: 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]',
+      yellow: 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]'
+    };
+    
+    const textColors = {
+      blue: 'text-blue-400',
+      green: 'text-green-400',
+      red: 'text-red-400',
+      yellow: 'text-yellow-400'
+    };
+
+    return (
+      <div 
+        onClick={isClickable ? onClick : undefined}
+        className={`
+          glass-panel p-6 rounded-2xl relative overflow-hidden group transition-all duration-300
+          ${isClickable ? 'cursor-pointer hover:-translate-y-2 hover:bg-white/5' : ''}
+          border-l-4 ${borderColors[color]}
+        `}
+      >
+        {/* Background Icon Opacity */}
+        <div className={`absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-all duration-500 text-8xl ${textColors[color]}`}>
+          {icon}
+        </div>
+
+        <div className="relative z-10">
+          <div className={`text-3xl mb-2 ${textColors[color]}`}>{icon}</div>
+          <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider">{title}</h3>
+          <p className="text-3xl font-bold text-white mt-1 drop-shadow-md">{value}</p>
+          
+          {isClickable && (
+            <div className="mt-4 flex items-center text-xs text-gray-300 group-hover:text-white transition-colors">
+              View Details <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
-    // Updated Layout Class (No ml-64)
-    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">Store Overview</h2>
-
-      {/* Cards Section (Responsive Grid) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 hover:shadow-lg transition">
-          <h3 className="text-gray-500 text-sm">Total Stock Value</h3>
-          <p className="text-2xl font-bold text-gray-800">₹ {stats.totalStockValue.toLocaleString()}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500 hover:shadow-lg transition">
-          <h3 className="text-gray-500 text-sm">Total Medicines</h3>
-          <p className="text-2xl font-bold text-gray-800">{stats.totalMedicines}</p>
-        </div>
-        <div onClick={handleExpiryClick} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500 cursor-pointer hover:bg-red-50 transition transform hover:scale-105">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-gray-500 text-sm">Expiring Soon</h3>
-              <p className={`text-2xl font-bold ${stats.expiringSoon > 0 ? 'text-red-600' : 'text-gray-800'}`}>{stats.expiringSoon} Items</p>
-            </div>
-            {stats.expiringSoon > 0 && <FaCalendarTimes className="text-red-500 text-2xl animate-pulse"/>}
-          </div>
-        </div>
-        <div onClick={handleLowStockClick} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500 cursor-pointer hover:bg-yellow-50 transition transform hover:scale-105">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-gray-500 text-sm">Low Stock</h3>
-              <p className={`text-2xl font-bold ${stats.lowStockItems > 0 ? 'text-yellow-600' : 'text-gray-800'}`}>{stats.lowStockItems} Items</p>
-            </div>
-            {stats.lowStockItems > 0 && <FaExclamationTriangle className="text-yellow-500 text-2xl animate-pulse"/>}
-          </div>
-        </div>
+    <div className="p-4 md:p-8 min-h-screen">
+      
+      {/* HEADER */}
+      <div className="mb-8 animate-fade-in">
+        <h2 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 drop-shadow-lg">
+          Dashboard Overview
+        </h2>
+        <p className="text-gray-400 mt-2">Real-time statistics of your medical store</p>
       </div>
 
-      {/* Graph Section */}
-      <div className="bg-white p-6 rounded-xl shadow-md">
-        <h3 className="text-lg font-bold text-gray-700 mb-4">Sales Trend (Last 7 Days)</h3>
-        <div className="h-64 md:h-80">
+      {/* --- NEON CARDS GRID --- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in">
+        <StatCard 
+          title="Total Stock Value" 
+          value={`₹ ${stats.totalStockValue.toLocaleString()}`} 
+          icon={<FaRupeeSign/>} 
+          color="blue" 
+        />
+        <StatCard 
+          title="Total Medicines" 
+          value={stats.totalMedicines} 
+          icon={<FaPills/>} 
+          color="green" 
+        />
+        <StatCard 
+          title="Expiring Soon" 
+          value={`${stats.expiringSoon} Items`} 
+          icon={<FaCalendarTimes/>} 
+          color="red" 
+          onClick={handleExpiryClick} 
+          isClickable={true} 
+        />
+        <StatCard 
+          title="Low Stock" 
+          value={`${stats.lowStockItems} Items`} 
+          icon={<FaExclamationTriangle/>} 
+          color="yellow" 
+          onClick={handleLowStockClick} 
+          isClickable={true} 
+        />
+      </div>
+
+      {/* --- CHART SECTION (Glassmorphism) --- */}
+      <div className="glass-panel p-6 md:p-8 rounded-2xl shadow-2xl animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-200 flex items-center">
+            <span className="w-1 h-6 bg-blue-500 mr-3 rounded-full shadow-[0_0_10px_#3b82f6]"></span>
+            Sales Analytics
+          </h3>
+          <span className="text-xs bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full border border-blue-500/30">Last 7 Days</span>
+        </div>
+        
+        <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="sales" stroke="#2563eb" strokeWidth={3} activeDot={{ r: 8 }} />
-            </LineChart>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+              <XAxis 
+                dataKey="name" 
+                stroke="#9ca3af" 
+                tick={{fill: '#9ca3af', fontSize: 12}} 
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                stroke="#9ca3af" 
+                tick={{fill: '#9ca3af', fontSize: 12}} 
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `₹${value}`}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'rgba(17, 24, 39, 0.9)', 
+                  border: '1px solid #374151', 
+                  borderRadius: '12px', 
+                  color: '#fff',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                }} 
+                itemStyle={{ color: '#60a5fa' }}
+                formatter={(value) => [`₹${value}`, "Sales"]}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="sales" 
+                stroke="#3b82f6" 
+                strokeWidth={4} 
+                fillOpacity={1} 
+                fill="url(#colorSales)" 
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Modals (Fixed Overlay for Mobile) */}
-      {showLowStockModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in max-h-[80vh] flex flex-col">
-            <div className="bg-yellow-500 p-4 flex justify-between items-center text-white">
-              <h3 className="text-xl font-bold flex items-center"><FaExclamationTriangle className="mr-2"/> Low Stock Alert</h3>
-              <button onClick={() => setShowLowStockModal(false)}><FaTimes size={24}/></button>
-            </div>
-            <div className="p-4 overflow-y-auto">
-              <table className="w-full text-left">
-                <thead className="border-b text-gray-600"><tr><th className="py-2">Name</th><th className="py-2 text-center">Remaining</th></tr></thead>
-                <tbody>{lowStockList.map(item => (<tr key={item._id} className="border-b"><td className="py-2">{item.name}</td><td className="py-2 text-center text-red-600 font-bold">{item.quantity}</td></tr>))}</tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* --- MODALS (Dark Glass Overlay) --- */}
+      {[
+        { 
+          show: showLowStockModal, 
+          close: () => setShowLowStockModal(false), 
+          title: "Low Stock Alert", 
+          icon: <FaExclamationTriangle/>, 
+          data: lowStockList, 
+          color: "yellow",
+          headerColor: "text-yellow-400"
+        },
+        { 
+          show: showExpiryModal, 
+          close: () => setShowExpiryModal(false), 
+          title: "Expiring Soon", 
+          icon: <FaCalendarTimes/>, 
+          data: expiryList, 
+          color: "red",
+          headerColor: "text-red-400"
+        }
+      ].map((modal, idx) => (
+        modal.show && (
+          <div key={idx} className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in">
+            <div className="glass-panel w-full max-w-2xl rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-gray-700 transform transition-all scale-100">
+              
+              {/* Modal Header */}
+              <div className="p-5 flex justify-between items-center border-b border-gray-700 bg-gray-800/50">
+                <h3 className={`text-xl font-bold flex items-center gap-3 ${modal.headerColor}`}>
+                  {modal.icon} {modal.title}
+                </h3>
+                <button 
+                  onClick={modal.close} 
+                  className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition"
+                >
+                  <FaTimes size={20}/>
+                </button>
+              </div>
 
-      {showExpiryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in max-h-[80vh] flex flex-col">
-            <div className="bg-red-600 p-4 flex justify-between items-center text-white">
-              <h3 className="text-xl font-bold flex items-center"><FaCalendarTimes className="mr-2"/> Expiring Soon</h3>
-              <button onClick={() => setShowExpiryModal(false)}><FaTimes size={24}/></button>
-            </div>
-            <div className="p-4 overflow-y-auto">
-              <table className="w-full text-left">
-                <thead className="border-b text-gray-600"><tr><th className="py-2">Name</th><th className="py-2">Expiry</th><th className="py-2 text-center">Qty</th></tr></thead>
-                <tbody>{expiryList.map(item => (<tr key={item._id} className="border-b"><td className="py-2">{item.name}</td><td className="py-2 text-red-600">{new Date(item.expiryDate).toLocaleDateString()}</td><td className="py-2 text-center font-bold">{item.quantity}</td></tr>))}</tbody>
-              </table>
+              {/* Modal List */}
+              <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                {modal.data.length > 0 ? (
+                  <table className="w-full text-left text-gray-300">
+                    <thead className="text-gray-500 uppercase text-xs border-b border-gray-700">
+                      <tr>
+                        <th className="py-3 px-2">Medicine Name</th>
+                        <th className="py-3 px-2">Category</th>
+                        <th className="py-3 px-2 text-center">{modal.color === 'red' ? 'Expiry Date' : 'Stock Qty'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modal.data.map((item) => (
+                        <tr key={item._id} className="border-b border-gray-800 hover:bg-white/5 transition duration-200">
+                          <td className="py-4 px-2 font-medium text-white">{item.name}</td>
+                          <td className="py-4 px-2 text-sm text-gray-400">{item.category}</td>
+                          <td className={`py-4 px-2 text-center font-bold ${modal.color === 'red' ? 'text-red-400' : 'text-yellow-400'}`}>
+                            {modal.color === 'red' 
+                              ? new Date(item.expiryDate).toLocaleDateString() 
+                              : item.quantity
+                            }
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No items found in this category.
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-gray-700 text-right bg-gray-800/50">
+                <button 
+                  onClick={modal.close} 
+                  className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-medium transition shadow-lg"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      ))}
+
     </div>
   );
 };
+
 export default DashboardStats;
