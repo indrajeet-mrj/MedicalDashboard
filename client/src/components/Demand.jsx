@@ -54,7 +54,7 @@ const Demand = () => {
       {/* Input Section */}
       <div className="bg-white p-6 rounded-xl shadow-lg mb-8 max-w-2xl border-t-4 border-purple-500">
         <form onSubmit={handleAdd} className="flex flex-col md:flex-row gap-4">
-          <input type="text" placeholder="Medicine Name..." value={medicineName} onChange={(e) => setMedicineName(e.target.value)} className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+          <input type="text" placeholder="Medicine Name..." value={medicineName} onChange={(e) => setMedicineName(e.target.value)} className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-black " />
           <button type="submit" className="bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 flex justify-center items-center">
             <FaPlus className="mr-2"/> Add Note
           </button>
@@ -64,7 +64,7 @@ const Demand = () => {
       {/* List Section */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden max-w-4xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[500px] text-gray-700">
+          <table className="w-full text-left min-w-[500px]">
             <thead className="bg-gray-200 text-gray-700">
               <tr><th className="p-4">#</th><th className="p-4">Medicine Name</th><th className="p-4">Date Noted</th><th className="p-4 text-center">Action</th></tr>
             </thead>
@@ -73,7 +73,7 @@ const Demand = () => {
                 <tr key={item._id} className="border-b hover:bg-gray-50">
                   <td className="p-4 font-bold">{index + 1}</td>
                   <td className="p-4 font-medium text-lg">{item.medicineName}</td>
-                  <td className="p-4 text-gray-500">{new Date(item.noteDate).toLocaleDateString()}</td>
+                  <td className="p-4 text-gray-700">{new Date(item.noteDate).toLocaleDateString()}</td>
                   <td className="p-4 text-center"><button onClick={() => handleDelete(item._id)} className="text-red-500 hover:bg-red-100 p-2 rounded-full"><FaTrash /></button></td>
                 </tr>
               ))}
