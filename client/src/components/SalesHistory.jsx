@@ -95,9 +95,9 @@ const SalesHistory = () => {
                 <thead className="border-b text-gray-600 text-sm bg-gray-50"><tr><th className="p-3">Item</th><th className="p-3">Sold</th><th className="p-3">Total</th><th className="p-3 text-center">Return Qty</th><th className="p-3 text-center">Action</th></tr></thead>
                 <tbody>
                   {selectedInvoice.items.map(item => (
-                    <tr key={item._id} className="border-b ">
-                      <td className="p-3 text-gray-500">{item.medicineName}</td><td className="p-3 text-gray-500">{item.quantitySold}</td><td className="p-3 text-gray-500">₹{item.totalAmount}</td>
-                      <td className="p-3 text-center text-gray-500"><input type="number" min="0" max={item.quantitySold} onChange={(e) => setReturnQtys({...returnQtys, [item._id]: e.target.value})} className="w-16 p-1 border rounded text-center"/></td>
+                    <tr key={item._id} className="border-b text-gray-600">
+                      <td className="p-3">{item.medicineName}</td><td className="p-3">{item.quantitySold}</td><td className="p-3">₹{item.totalAmount}</td>
+                      <td className="p-3 text-center"><input type="number" min="0" max={item.quantitySold} onChange={(e) => setReturnQtys({...returnQtys, [item._id]: e.target.value})} className="w-16 p-1 border rounded text-center"/></td>
                       <td className="p-3 text-center"><button onClick={() => processReturn(item._id, item.quantitySold)} className="text-red-500 hover:bg-red-50 p-2 rounded-full"><FaUndo /></button></td>
                     </tr>
                   ))}
