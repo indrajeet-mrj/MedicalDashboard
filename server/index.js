@@ -2,63 +2,71 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
-// Configuration
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey123"; // Secret Key
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// ---------------------------------------------------------
-// 1. MONGODB DATABASE CONNECTION
-// ---------------------------------------------------------
+// DB Connection
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB Connected Successfully (Cloud)");
+    console.log("✅ MongoDB Connected");
   } catch (error) {
-    console.error("❌ MongoDB Connection Error:", error);
+    console.log("❌ DB Error:", error);
     process.exit(1);
   }
 };
 connectDB();
 
 // ---------------------------------------------------------
-// 2. DATABASE MODELS (SCHEMAS)
+// 1. MODELS (USER Added & Others Updated)
 // ---------------------------------------------------------
 
-// A. Inventory Model (Added 'discount')
+// A. USER MODEL (Store Owner)
+const UserSchema = new mongoose.Schema({
+  storeName: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+});
+const User = mongoose.model("User", UserSchema);
+
+// B. INVENTORY MODEL (Linked to User)
 const MedicineSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // <-- Owner Link
   name: { type: String, required: true },
   category: { type: String, required: true },
   expiryDate: { type: Date, required: true },
   quantity: { type: Number, required: true },
   price: { type: Number, required: true },
-  discount: { type: Number, default: 0 }, // <-- NEW: Default Discount %
+  discount: { type: Number, default: 0 },
 }, { timestamps: true });
-
 const Medicine = mongoose.model("Medicine", MedicineSchema);
 
-// B. Sales Model (Added 'discountGiven')
+// C. SALES MODEL (Linked to User)
 const SalesSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // <-- Owner Link
   invoiceId: { type: String, required: true },
   medicineId: { type: mongoose.Schema.Types.ObjectId, ref: "Medicine" },
   medicineName: { type: String },
   patientName: { type: String },
   quantitySold: { type: Number, required: true },
   pricePerUnit: { type: Number }, 
-  discountGiven: { type: Number, default: 0 }, // <-- NEW
+  discountGiven: { type: Number, default: 0 },
   totalAmount: { type: Number, required: true },
   saleDate: { type: Date, default: Date.now },
 });
-
 const Sale = mongoose.model("Sale", SalesSchema);
 
-// C. Demand Model
+// D. DEMAND MODEL (Linked to User)
 const DemandSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // <-- Owner Link
   medicineName: { type: String, required: true },
   noteDate: { type: Date, default: Date.now }
 });
@@ -66,211 +74,201 @@ const Demand = mongoose.model("Demand", DemandSchema);
 
 
 // ---------------------------------------------------------
-// 3. API ROUTES (INVENTORY & DEMAND)
+// 2. MIDDLEWARE (Suraksha Guard)
+// ---------------------------------------------------------
+const authMiddleware = (req, res, next) => {
+  const token = req.header("Authorization");
+  if (!token) return res.status(401).json({ error: "Access Denied! Login First." });
+
+  try {
+    const verified = jwt.verify(token, JWT_SECRET);
+    req.user = verified; // User ID request mein jod di
+    next();
+  } catch (error) {
+    res.status(400).json({ error: "Invalid Token" });
+  }
+};
+
+// ---------------------------------------------------------
+// 3. AUTH ROUTES (Login / Register)
 // ---------------------------------------------------------
 
-// Add Medicine
-app.post("/api/medicine/add", async (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   try {
-    const newMedicine = new Medicine(req.body);
-    const savedMedicine = await newMedicine.save();
+    const { storeName, email, password } = req.body;
     
-    // Auto-remove from Demand list
-    await Demand.findOneAndDelete({ medicineName: { $regex: new RegExp(req.body.name, "i") } });
+    // Check Email
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ error: "Email already registered!" });
 
-    res.status(201).json(savedMedicine);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    // Hash Password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({ storeName, email, password: hashedPassword });
+    await newUser.save();
+    
+    res.status(201).json({ message: "Store Registered Successfully! Please Login." });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Get All Medicines
-app.get("/api/medicine/all", async (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   try {
-    const medicines = await Medicine.find();
-    res.status(200).json(medicines);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ error: "Email not found!" });
+
+    const validPass = await bcrypt.compare(password, user.password);
+    if (!validPass) return res.status(400).json({ error: "Wrong Password!" });
+
+    // Create Token
+    const token = jwt.sign({ id: user._id }, JWT_SECRET);
+    res.json({ token, storeName: user.storeName, email: user.email });
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Update Medicine
-app.put("/api/medicine/update/:id", async (req, res) => {
+
+// ---------------------------------------------------------
+// 4. PROTECTED DATA ROUTES (Har jagah userId check hoga)
+// ---------------------------------------------------------
+
+// --- INVENTORY ---
+app.post("/api/medicine/add", authMiddleware, async (req, res) => {
   try {
-    const updatedMedicine = await Medicine.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(updatedMedicine);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const newMedicine = new Medicine({ ...req.body, userId: req.user.id });
+    await newMedicine.save();
+    // Auto-remove from Demand
+    await Demand.findOneAndDelete({ userId: req.user.id, medicineName: { $regex: new RegExp(req.body.name, "i") } });
+    res.status(201).json(newMedicine);
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Delete Medicine
-app.delete("/api/medicine/delete/:id", async (req, res) => {
+app.get("/api/medicine/all", authMiddleware, async (req, res) => {
   try {
-    await Medicine.findByIdAndDelete(req.params.id);
-    res.json({ message: "Medicine Deleted" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const medicines = await Medicine.find({ userId: req.user.id }); // Sirf apna data
+    res.json(medicines);
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Demand List APIs
-app.post("/api/demand/add", async (req, res) => {
+app.put("/api/medicine/update/:id", authMiddleware, async (req, res) => {
+  try {
+    await Medicine.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, req.body);
+    res.json({ message: "Updated" });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+app.delete("/api/medicine/delete/:id", authMiddleware, async (req, res) => {
+  try {
+    await Medicine.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    res.json({ message: "Deleted" });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// --- DEMAND ---
+app.post("/api/demand/add", authMiddleware, async (req, res) => {
   try {
     const { medicineName } = req.body;
-    // Check Stock
-    const existingMedicine = await Medicine.findOne({ 
-      name: { $regex: new RegExp(medicineName, "i") },
-      quantity: { $gt: 0 } 
-    });
+    const existing = await Medicine.findOne({ userId: req.user.id, name: { $regex: new RegExp(medicineName, "i") }, quantity: { $gt: 0 } });
+    if (existing) return res.status(400).json({ error: "Already in Stock!" });
 
-    if (existingMedicine) {
-      return res.status(400).json({ error: `⚠️ Medicine already in Stock! (Qty: ${existingMedicine.quantity})` });
-    }
-
-    const newDemand = new Demand(req.body);
+    const newDemand = new Demand({ medicineName, userId: req.user.id });
     await newDemand.save();
     res.status(201).json(newDemand);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.get("/api/demand/all", async (req, res) => {
-  try {
-    const demands = await Demand.find().sort({ noteDate: -1 });
-    res.json(demands);
-  } catch (error) { res.status(500).json({ error: error.message }); }
+app.get("/api/demand/all", authMiddleware, async (req, res) => {
+  const demands = await Demand.find({ userId: req.user.id }).sort({ noteDate: -1 });
+  res.json(demands);
 });
 
-app.delete("/api/demand/delete/:id", async (req, res) => {
-  try {
-    await Demand.findByIdAndDelete(req.params.id);
-    res.json({ message: "Removed" });
-  } catch (error) { res.status(500).json({ error: error.message }); }
+app.delete("/api/demand/delete/:id", authMiddleware, async (req, res) => {
+  await Demand.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+  res.json({ message: "Deleted" });
 });
 
-
-// ---------------------------------------------------------
-// 4. API ROUTES (SALES, RETURNS & DASHBOARD)
-// ---------------------------------------------------------
-
-// Create Sale (With Discount Calculation)
-app.post("/api/sales/add", async (req, res) => {
+// --- SALES ---
+app.post("/api/sales/add", authMiddleware, async (req, res) => {
   try {
     const { medicineId, quantity, patientName, invoiceId, discount } = req.body;
-
-    const medicine = await Medicine.findById(medicineId);
+    const medicine = await Medicine.findOne({ _id: medicineId, userId: req.user.id });
     if (!medicine) return res.status(404).json({ error: "Medicine not found" });
 
-    if (medicine.quantity < quantity) {
-      return res.status(400).json({ error: `Insufficient Stock for ${medicine.name}` });
-    }
+    if (medicine.quantity < quantity) return res.status(400).json({ error: "Low Stock" });
 
-    // Deduct Stock
     medicine.quantity -= quantity;
     await medicine.save();
 
-    // Calculate Price with Discount
     const basePrice = medicine.price * quantity;
-    const discountAmount = (basePrice * (discount || 0)) / 100;
-    const finalAmount = basePrice - discountAmount;
+    const finalAmount = basePrice - ((basePrice * (discount || 0)) / 100);
 
     const newSale = new Sale({
-      invoiceId,
-      medicineId,
-      medicineName: medicine.name,
-      patientName: patientName || "Walk-in",
-      quantitySold: quantity,
-      pricePerUnit: medicine.price,
-      discountGiven: discount || 0,
-      totalAmount: finalAmount
+      userId: req.user.id,
+      invoiceId, medicineId, medicineName: medicine.name, patientName: patientName || "Walk-in",
+      quantitySold: quantity, pricePerUnit: medicine.price, discountGiven: discount || 0, totalAmount: finalAmount
     });
-    
     await newSale.save();
     res.status(201).json(newSale);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Get Sales History
-app.get("/api/sales/history", async (req, res) => {
-  try {
-    const history = await Sale.find().sort({ saleDate: -1 });
-    res.json(history);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+app.get("/api/sales/history", authMiddleware, async (req, res) => {
+  const history = await Sale.find({ userId: req.user.id }).sort({ saleDate: -1 });
+  res.json(history);
 });
 
-// Return Logic
-app.post("/api/sales/return", async (req, res) => {
+app.post("/api/sales/return", authMiddleware, async (req, res) => {
   try {
     const { saleId, returnQty } = req.body;
-
-    const saleRecord = await Sale.findById(saleId);
+    const saleRecord = await Sale.findOne({ _id: saleId, userId: req.user.id });
     if (!saleRecord) return res.status(404).json({ error: "Record not found" });
 
-    if (returnQty > saleRecord.quantitySold) {
-      return res.status(400).json({ error: "Cannot return more than sold quantity" });
-    }
-
-    // Restore Stock
-    const medicine = await Medicine.findById(saleRecord.medicineId);
+    const medicine = await Medicine.findOne({ _id: saleRecord.medicineId, userId: req.user.id });
     if (medicine) {
       medicine.quantity += parseInt(returnQty);
       await medicine.save();
     }
-
-    // Calculate Refund based on actual sold price (considering discount)
-    const effectivePricePerUnit = saleRecord.totalAmount / saleRecord.quantitySold;
-    const refundAmount = effectivePricePerUnit * returnQty;
     
+    // Simple refund calculation for demo
+    let price = saleRecord.pricePerUnit || (saleRecord.totalAmount / saleRecord.quantitySold);
+    const refundAmount = price * returnQty;
+
     if (parseInt(returnQty) === saleRecord.quantitySold) {
       await Sale.findByIdAndDelete(saleId);
     } else {
       saleRecord.quantitySold -= returnQty;
       saleRecord.totalAmount -= refundAmount;
-      if (!saleRecord.invoiceId) saleRecord.invoiceId = `OLD-${saleRecord._id}`;
       await saleRecord.save();
     }
-
     res.json({ message: "Return Successful", refundAmount });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Dashboard APIs
-app.get("/api/dashboard/stats", async (req, res) => {
+// --- DASHBOARD ---
+app.get("/api/dashboard/stats", authMiddleware, async (req, res) => {
   try {
-    const medicines = await Medicine.find();
+    const medicines = await Medicine.find({ userId: req.user.id });
     const totalStockValue = medicines.reduce((acc, item) => acc + (item.quantity * item.price), 0);
     const lowStockItems = medicines.filter(item => item.quantity < 40).length;
-    const today = new Date();
-    const next30Days = new Date();
-    next30Days.setDate(today.getDate() + 30);
-    const expiringSoon = medicines.filter(item => {
-      const expDate = new Date(item.expiryDate);
-      return expDate >= today && expDate <= next30Days;
-    }).length;
-
+    const today = new Date(); const next30 = new Date(); next30.setDate(today.getDate() + 30);
+    const expiringSoon = medicines.filter(item => new Date(item.expiryDate) >= today && new Date(item.expiryDate) <= next30).length;
     res.json({ totalStockValue, lowStockItems, expiringSoon, totalMedicines: medicines.length });
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-app.get("/api/medicine/low-stock-list", async (req, res) => {
-  const list = await Medicine.find({ quantity: { $lt: 40 } });
+app.get("/api/medicine/low-stock-list", authMiddleware, async (req, res) => {
+  const list = await Medicine.find({ userId: req.user.id, quantity: { $lt: 40 } });
   res.json(list);
 });
-app.get("/api/medicine/expiring-soon-list", async (req, res) => {
-  const today = new Date(); const next30Days = new Date(); next30Days.setDate(today.getDate() + 30);
-  const list = await Medicine.find({ expiryDate: { $gte: today, $lte: next30Days } });
+app.get("/api/medicine/expiring-soon-list", authMiddleware, async (req, res) => {
+  const today = new Date(); const next30 = new Date(); next30.setDate(today.getDate() + 30);
+  const list = await Medicine.find({ userId: req.user.id, expiryDate: { $gte: today, $lte: next30 } });
   res.json(list);
 });
-app.get("/api/sales/chart", async (req, res) => {
+app.get("/api/sales/chart", authMiddleware, async (req, res) => {
   const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const sales = await Sale.aggregate([
-    { $match: { saleDate: { $gte: sevenDaysAgo } } },
+    { $match: { saleDate: { $gte: sevenDaysAgo }, userId: new mongoose.Types.ObjectId(req.user.id) } }, // Aggregation mein ID object banana padta hai
     { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$saleDate" } }, totalSales: { $sum: "$totalAmount" } } },
     { $sort: { _id: 1 } }
   ]);
