@@ -2,27 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* --- Custom Animations --- */
+/* --- GLOBAL ANIMATIONS --- */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6; }
-  50% { box-shadow: 0 0 20px #2563eb, 0 0 30px #2563eb; }
 }
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* --- Glassmorphism Utilities --- */
+/* --- GLASSMORPHISM & THEME LOGIC --- */
+
+/* Default (Dark Mode) Glass Panel */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.7); /* Dark semi-transparent */
-  backdrop-filter: blur(12px);       /* Blur effect */
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(17, 24, 39, 0.7); /* Dark Gray Transparent */
+  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
 .glass-input {
@@ -31,22 +28,37 @@
   color: white;
 }
 
-.glass-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); /* Neon Glow */
+/* --- LIGHT MODE OVERRIDES --- */
+/* Jab body par 'light-mode' class hogi, to ye colors apply honge */
+
+.light-mode .glass-panel {
+  background: rgba(255, 255, 255, 0.85) !important; /* White Transparent */
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: #1f2937 !important; /* Dark Text */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Scrollbar styling for dark mode */
-::-webkit-scrollbar {
-  width: 8px;
+.light-mode .glass-input {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid #d1d5db !important; /* Gray Border */
+  color: #111827 !important; /* Black Text */
 }
-::-webkit-scrollbar-track {
-  background: #111827; 
+
+/* Force Text Colors in Light Mode (Taaki manually files edit na karni padein) */
+.light-mode .text-white {
+  color: #111827 !important; /* Force Black text in Light Mode */
 }
-::-webkit-scrollbar-thumb {
-  background: #374151; 
-  border-radius: 4px;
+
+.light-mode .text-gray-400 {
+  color: #4b5563 !important; /* Darker Gray in Light Mode */
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #4b5563; 
+
+.light-mode .text-gray-300 {
+  color: #374151 !important;
 }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+.light-mode ::-webkit-scrollbar-thumb { background: #9ca3af; }
