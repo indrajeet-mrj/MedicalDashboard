@@ -13,7 +13,7 @@ const Auth = ({ onLogin }) => {
     e.preventDefault();
     setError('');
     
-    // Replace URL with your Render URL
+    // REPLACE WITH YOUR RENDER URL
     const API_URL = 'https://medicaldashboard-2556.onrender.com/api/auth'; 
 
     try {
@@ -23,10 +23,12 @@ const Auth = ({ onLogin }) => {
         setIsRegister(false);
       } else {
         const res = await axios.post(`${API_URL}/login`, { email: formData.email, password: formData.password });
-        // Token Store karo
+        
+        // Token aur Store Name save kar rahe hain
         localStorage.setItem('token', res.data.token);
-        localStorage.setItem('storeName', res.data.storeName);
-        onLogin(); // App ko batao login ho gaya
+        localStorage.setItem('storeName', res.data.storeName); // <-- NAME SAVED HERE
+        
+        onLogin();
       }
     } catch (err) {
       setError(err.response?.data?.error || "Server Error");
@@ -39,8 +41,11 @@ const Auth = ({ onLogin }) => {
         
         <div className="text-center mb-8">
           <FaClinicMedical className="text-5xl text-blue-500 mx-auto mb-4 animate-pulse" />
-          <h1 className="text-3xl font-bold text-white mb-2">AIR Medical Store</h1>
-          <p className="text-gray-400">Store Owner Portal</p>
+          {/* UPDATED NAME HERE */}
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
+            MediStock
+          </h1>
+          <p className="text-gray-400">Pharmacy Management System</p>
         </div>
 
         {error && <div className="bg-red-500/20 text-red-200 p-3 rounded-lg mb-4 text-sm text-center border border-red-500/50">{error}</div>}
@@ -49,7 +54,7 @@ const Auth = ({ onLogin }) => {
           {isRegister && (
             <div className="relative">
               <FaUser className="absolute left-3 top-4 text-gray-500"/>
-              <input type="text" name="storeName" placeholder="Medical Store Name" value={formData.storeName} onChange={handleChange} className="w-full p-3 pl-10 glass-input rounded-lg outline-none text-white" required />
+              <input type="text" name="storeName" placeholder="Medical Store Name (e.g. Gupta Medicos)" value={formData.storeName} onChange={handleChange} className="w-full p-3 pl-10 glass-input rounded-lg outline-none text-white" required />
             </div>
           )}
           
@@ -64,14 +69,14 @@ const Auth = ({ onLogin }) => {
           </div>
 
           <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-[0_0_15px_#2563eb]">
-            {isRegister ? 'Create Store Account' : 'Login to Dashboard'}
+            {isRegister ? 'Register Store' : 'Login'}
           </button>
         </form>
 
         <p className="text-center text-gray-400 mt-6 text-sm">
-          {isRegister ? "Already have an account?" : "New Store Owner?"} 
+          {isRegister ? "Already have an account?" : "New here?"} 
           <button onClick={() => setIsRegister(!isRegister)} className="text-blue-400 hover:text-blue-300 ml-2 underline font-bold">
-            {isRegister ? "Login Here" : "Register Now"}
+            {isRegister ? "Login" : "Create Account"}
           </button>
         </p>
 

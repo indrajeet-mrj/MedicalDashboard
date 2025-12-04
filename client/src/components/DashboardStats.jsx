@@ -16,6 +16,7 @@ const DashboardStats = () => {
     totalMedicines: 0
   });
   const [chartData, setChartData] = useState([]);
+  const [storeName, setStoreName] = useState('MediStock'); // Default Name
   
   // Modals
   const [showLowStockModal, setShowLowStockModal] = useState(false);
@@ -25,6 +26,11 @@ const DashboardStats = () => {
 
   // --- FETCH DATA ---
   useEffect(() => {
+    // 1. Get Store Name
+    const name = localStorage.getItem('storeName');
+    if (name) setStoreName(name);
+
+    // 2. Get API Data
     const fetchData = async () => {
       try {
         const statsRes = await axios.get('https://medicaldashboard-2556.onrender.com/api/dashboard/stats');
@@ -64,7 +70,7 @@ const DashboardStats = () => {
     }
   };
 
-  // --- REUSABLE NEON CARD ---
+  // --- NEON CARD COMPONENT ---
   const StatCard = ({ title, value, icon, color, onClick, isClickable }) => {
     const borderColors = {
       blue: 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.4)]',
@@ -95,22 +101,20 @@ const DashboardStats = () => {
   return (
     <div className="p-4 md:p-8 min-h-screen">
       
-      {/* --- STORE NAME HEADER (CENTERED) --- */}
+      {/* --- DYNAMIC STORE NAME HEADER --- */}
       <div className="text-center mb-12 animate-fade-in relative z-10">
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-2 flex justify-center items-center gap-4">
+        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-2 flex flex-col md:flex-row justify-center items-center gap-4">
           <FaClinicMedical className="text-blue-500 animate-pulse" />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]">
-            AIR Medical Store
+            {storeName}
           </span>
         </h1>
         <p className="text-gray-400 text-lg md:text-xl tracking-wide">
           Advanced Inventory & Sales Dashboard
         </p>
-        {/* Divider Line */}
         <div className="w-32 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent mx-auto mt-6 rounded-full opacity-70"></div>
       </div>
 
-      {/* Section Title */}
       <h2 className="text-2xl font-bold text-gray-200 mb-6 flex items-center">
         <span className="w-1 h-6 bg-blue-500 mr-3 rounded-full shadow-[0_0_10px_#3b82f6]"></span>
         Overview
