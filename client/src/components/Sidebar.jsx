@@ -1,24 +1,28 @@
-import React, { useState, useEffect } from 'react'; // useEffect add kiya
+import React, { useState, useEffect } from 'react';
 import { 
   FaHome, FaBoxOpen, FaShoppingCart, FaClipboardList, 
-  FaHistory, FaBars, FaTimes, FaSignOutAlt, FaClinicMedical 
+  FaHistory, FaBars, FaTimes, FaSignOutAlt, FaClinicMedical,
+  FaSun, FaMoon // <-- Icons Import Kiye
 } from 'react-icons/fa';
 import { Link, useLocation } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext'; // <-- Context Import Kiya
 
 const Sidebar = ({ onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const [storeName, setStoreName] = useState('MediStock'); // Default Name
+  const [storeName, setStoreName] = useState('MediStock');
+  
+  // --- THEME CONTEXT ---
+  const { isDarkMode, toggleTheme } = useTheme(); // Theme Hook use kiya
 
-  // Fetch Store Name from LocalStorage
   useEffect(() => {
     const name = localStorage.getItem('storeName');
     if (name) setStoreName(name);
   }, []);
 
   const isActive = (path) => location.pathname === path 
-    ? "bg-blue-600/20 border-l-4 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
-    : "text-gray-400 hover:bg-white/5 hover:text-white transition-all";
+    ? "bg-blue-600/20 border-l-4 border-blue-500 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
+    : "text-gray-400 hover:bg-black/10 hover:text-blue-500 transition-all"; // Light mode friendly text
 
   const menuItems = [
     { path: "/", name: "Dashboard", icon: <FaHome size={20} /> },
@@ -30,37 +34,52 @@ const Sidebar = ({ onLogout }) => {
 
   return (
     <>
-      {/* Mobile Header */}
-      <div className="md:hidden glass-panel text-white p-4 flex justify-between items-center fixed top-0 w-full z-50 shadow-lg border-b border-white/10">
+      {/* --- MOBILE HEADER --- */}
+      <div className={`md:hidden p-4 flex justify-between items-center fixed top-0 w-full z-50 shadow-lg border-b transition-colors duration-300
+        ${isDarkMode ? "glass-panel border-white/10" : "bg-white border-gray-200"}`}>
+        
         <div className="flex items-center gap-2">
           <FaClinicMedical className="text-blue-500 animate-pulse"/>
-          <span className="font-bold text-lg tracking-wider text-white">
-            {storeName} {/* Dynamic Name */}
+          <span className={`font-bold text-lg tracking-wider ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+            {storeName}
           </span>
         </div>
-        <button onClick={() => setIsOpen(!isOpen)} className="text-white focus:outline-none hover:text-blue-400 transition">
-          {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
-        </button>
+
+        <div className="flex items-center gap-4">
+          {/* Mobile Theme Toggle */}
+          <button 
+            onClick={toggleTheme} 
+            className={`p-2 rounded-full transition ${isDarkMode ? "text-yellow-400 bg-gray-800" : "text-orange-500 bg-gray-100 border border-gray-300"}`}
+          >
+            {isDarkMode ? <FaSun size={18} /> : <FaMoon size={18} />}
+          </button>
+
+          <button onClick={() => setIsOpen(!isOpen)} className={`${isDarkMode ? "text-white" : "text-gray-900"} focus:outline-none`}>
+            {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+          </button>
+        </div>
       </div>
 
-      {/* Sidebar */}
+      {/* --- SIDEBAR CONTAINER --- */}
       <div className={`
-        glass-panel h-screen fixed top-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out flex flex-col
+        h-screen fixed top-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out flex flex-col border-r
         ${isOpen ? "translate-x-0" : "-translate-x-full"} 
-        md:translate-x-0 md:static md:block border-r border-white/10
+        md:translate-x-0 md:static md:block
+        ${isDarkMode ? "glass-panel border-white/10" : "bg-white border-gray-200 shadow-xl"} 
       `}>
         
-        {/* LOGO SECTION - DYNAMIC NAME */}
-        <div className="p-8 text-center border-b border-white/10 relative overflow-hidden">
+        {/* LOGO AREA */}
+        <div className={`p-8 text-center border-b relative overflow-hidden ${isDarkMode ? "border-white/10" : "border-gray-200"}`}>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
           <h1 className="text-xl font-extrabold tracking-widest flex flex-col items-center">
             <FaClinicMedical className="text-4xl text-blue-500 mb-2 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]"/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-white break-words w-full">
+            <span className={`break-words w-full ${isDarkMode ? "text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-white" : "text-gray-800"}`}>
               {storeName}
             </span>
           </h1>
         </div>
 
+        {/* NAVIGATION */}
         <nav className="flex-1 p-4 space-y-3 mt-4 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => (
             <Link 
@@ -75,7 +94,23 @@ const Sidebar = ({ onLogout }) => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10 bg-black/20">
+        {/* --- FOOTER (Theme Toggle + Logout) --- */}
+        <div className={`p-4 border-t ${isDarkMode ? "border-white/10 bg-black/20" : "border-gray-200 bg-gray-50"}`}>
+          
+          {/* THEME TOGGLE BUTTON (Desktop) */}
+          <button 
+            onClick={toggleTheme} 
+            className={`w-full flex items-center justify-center p-3 rounded-lg mb-3 transition-all duration-300 border group
+              ${isDarkMode 
+                ? "bg-gray-800 text-yellow-400 hover:bg-gray-700 border-gray-700" 
+                : "bg-white text-gray-700 hover:bg-gray-200 border-gray-300 shadow-sm"
+              }`}
+          >
+            {isDarkMode ? <FaSun className="mr-2" /> : <FaMoon className="mr-2" />}
+            <span className="font-bold">{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
+          </button>
+
+          {/* LOGOUT BUTTON */}
           <button 
             onClick={onLogout} 
             className="w-full flex items-center justify-center p-3 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white transition-all duration-300 border border-red-600/30 hover:border-red-600 group"
