@@ -12,12 +12,11 @@
   animation: fadeIn 0.5s ease-out forwards;
 }
 
-/* --- GLASSMORPHISM & THEME LOGIC --- */
-
-/* Default (Dark Mode) Glass Panel */
+/* --- DARK MODE (DEFAULT) --- */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.7); /* Dark Gray Transparent */
+  background: rgba(17, 24, 39, 0.7);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
 }
@@ -28,36 +27,56 @@
   color: white;
 }
 
-/* --- LIGHT MODE OVERRIDES --- */
-/* Jab body par 'light-mode' class hogi, to ye colors apply honge */
+/* --- LIGHT MODE FIXES (High Contrast) --- */
 
+/* Background Panels ko White aur Shadow do */
 .light-mode .glass-panel {
-  background: rgba(255, 255, 255, 0.85) !important; /* White Transparent */
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  color: #1f2937 !important; /* Dark Text */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-}
-
-.light-mode .glass-input {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border: 1px solid #d1d5db !important; /* Gray Border */
+  background: #ffffff !important; /* Solid White */
+  backdrop-filter: none !important;
+  border: 1px solid #e5e7eb !important; /* Gray Border */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important; /* Strong Shadow */
   color: #111827 !important; /* Black Text */
 }
 
-/* Force Text Colors in Light Mode (Taaki manually files edit na karni padein) */
+/* Inputs ko White background aur Gray border do */
+.light-mode .glass-input {
+  background: #f9fafb !important; /* Very Light Gray */
+  border: 1px solid #9ca3af !important; /* Visible Border */
+  color: #000000 !important; /* Pitch Black Text */
+}
+.light-mode .glass-input::placeholder {
+  color: #6b7280 !important; /* Darker Placeholder */
+}
+
+/* --- TEXT VISIBILITY FIXES --- */
+/* Jab Light Mode on ho, to saare text colors ko override karo */
+
+.light-mode h1, .light-mode h2, .light-mode h3, .light-mode h4 {
+  color: #111827 !important; /* Black Headings */
+}
+
+.light-mode p, .light-mode span, .light-mode div {
+  color: #374151; /* Dark Gray Body Text */
+}
+
 .light-mode .text-white {
-  color: #111827 !important; /* Force Black text in Light Mode */
+  color: #111827 !important; /* Jahan text-white class lagi hai, use Black karo */
 }
 
-.light-mode .text-gray-400 {
-  color: #4b5563 !important; /* Darker Gray in Light Mode */
+.light-mode .text-gray-400, .light-mode .text-gray-300, .light-mode .text-gray-200 {
+  color: #4b5563 !important; /* Light gray text ko Dark Gray karo */
 }
 
-.light-mode .text-gray-300 {
-  color: #374151 !important;
+/* Sidebar Specific Fixes for Light Mode */
+.light-mode nav a {
+  color: #4b5563 !important;
+}
+.light-mode nav a:hover {
+  background-color: #f3f4f6 !important;
+  color: #2563eb !important;
 }
 
-/* Scrollbar */
+/* Scrollbar Visibility */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }

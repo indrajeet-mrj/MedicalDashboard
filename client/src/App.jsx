@@ -16,7 +16,6 @@ import Demand from './components/Demand';
 import Auth from './components/Auth';
 import LandingPage from './components/LandingPage';
 
-// Main Content Component (To access useTheme hook)
 const MainApp = () => {
   const { isDarkMode } = useTheme();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -49,21 +48,24 @@ const MainApp = () => {
   if (isLoading) return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
 
   return (
+    // 'light-mode' class yahan add hoti hai, jo CSS ko trigger karegi
     <div className={isDarkMode ? 'dark-mode' : 'light-mode'}>
       <ToastContainer position="top-right" autoClose={3000} theme={isDarkMode ? "dark" : "light"} />
 
-      {/* --- GLOBAL BACKGROUND --- */}
+      {/* --- BACKGROUND FIX --- */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-500 ease-in-out
         ${isDarkMode 
           ? "bg-gradient-to-br from-gray-900 via-black to-blue-900" 
-          : "bg-gradient-to-br from-blue-50 via-white to-gray-100"
+          : "bg-gray-100" // Simple Light Gray background for better contrast
         }`}
       >
-        {/* Animated Blobs (Dynamic Colors) */}
-        <div className={`absolute top-[-10%] left-[-10%] w-96 h-96 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob 
-          ${isDarkMode ? "bg-blue-600" : "bg-blue-300"}`}></div>
-        <div className={`absolute bottom-[-10%] right-[-10%] w-96 h-96 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob animation-delay-2000 
-          ${isDarkMode ? "bg-purple-600" : "bg-purple-300"}`}></div>
+        {/* Blobs sirf Dark Mode mein dikhayein taaki Light mode clean rahe */}
+        {isDarkMode && (
+          <>
+            <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob animation-delay-2000"></div>
+          </>
+        )}
       </div>
 
       <Router>
@@ -95,7 +97,6 @@ const MainApp = () => {
   );
 };
 
-// Root App Component
 function App() {
   return (
     <ThemeProvider>
